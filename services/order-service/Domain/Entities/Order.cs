@@ -2,6 +2,7 @@
 
 namespace OrderService.Domain.Entities
 {
+    [DynamoDBTable("Orders")]
     public class Order
     {
         [DynamoDBHashKey]
