@@ -1,5 +1,6 @@
 ﻿using Amazon.DynamoDBv2;
 using Microsoft.AspNetCore.Mvc;
+using OrderService.Application.IMessaging;
 using OrderService.Application.Models;
 using OrderService.Application.Services;
 
@@ -9,11 +10,12 @@ namespace OrderService.Controllers
     [Route("api/[controller]")]
     public class OrderController : Controller
     {
-        private readonly IOrdersService _orderService;
+        private readonly IOrdersService _orderService;  
 
         public OrderController(IOrdersService orderService)
         {
             _orderService = orderService;
+            
         }
 
         [HttpPost]
@@ -25,7 +27,7 @@ namespace OrderService.Controllers
 
             try
             {
-                await _orderService.CreateOrder(order);
+                await _orderService.CreateOrder(order);            
                 return StatusCode(201);
 
             }
