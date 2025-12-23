@@ -10,4 +10,4 @@ Este projeto será um sistema de pedidos baseado em uma arquitetura moderna de m
 - SQS (Order Queue) — Fila para processamento assíncrono das orders.
 - Order Processor (Worker) — Serviço que consome mensagens da fila e atualiza o status dos pedidos.
 
-
+![alt text](Sistema-Pedidos-1.png)

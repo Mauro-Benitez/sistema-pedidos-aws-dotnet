@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace OrderProcessor
 {
-    [DynamoDBTable ("Order")]
+    [DynamoDBTable ("Orders")]
     public class Order
     {
         [DynamoDBHashKey]
