@@ -7,21 +7,48 @@ on:
     branches: ["master"]
       
 jobs:
-  build:
+  # --- JOB 1: Build e Test do Order Service 
+  build-order-service:
+    name: Build & Test (API)
     runs-on: ubuntu-latest
     steps:    
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore Dependencies
-        run: dotnet restore
+      - name: Restore, Build and Test
+        working-directory: ./services/order-service
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+          dotnet test --no-build -c Release
 
-      - name: Build
-        run: dotnet build --no-restore
+  # --- JOB 2: Build e Test do Worker 
+  build-order-processor:
+    name: Build & Test (Worker)
+    runs-on: ubuntu-latest
+    steps:    
+      - uses: actions/checkout@v4
 
-      - name: Test
-        run: dotnet test --no-build
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore, Build and Test
+        working-directory: ./services/order-processor
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+          dotnet test --no-build -c Release
+
+  # --- JOB 3: Docker e ECR (Depende do sucesso dos testes) ---
+  docker-build-and-push:
+    name: Build Docker & Push to ECR
+    runs-on: ubuntu-latest
+    needs: [build-order-service, build-order-processor] # Só roda se os dois de cima passarem
+    steps:
+      - uses: actions/checkout@v4
