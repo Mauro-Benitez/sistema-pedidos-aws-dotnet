@@ -27,7 +27,7 @@ namespace OrderService.Controllers
 
             try
             {
-                await _orderService.CreateOrder(order);            
+                await _orderService.CreateOrder(order);
                 return StatusCode(201);
 
             }
@@ -35,7 +35,6 @@ namespace OrderService.Controllers
             {
                 return BadRequest(ex.Message);
             }
-
 
         }
 

@@ -34,6 +34,19 @@ builder.Services.AddSingleton<IAmazonDynamoDB>(sp =>
 
 builder.Services.AddSingleton<IDynamoDBContext, DynamoDBContext>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy =>
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+});
+
+
 var app = builder.Build();
 
 // Middleware do Swagger (somente em Development)
@@ -43,8 +56,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 
+
+app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.MapControllers();
 
 app.Run();

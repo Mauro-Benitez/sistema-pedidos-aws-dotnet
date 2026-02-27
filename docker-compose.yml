@@ -1,0 +1,29 @@
+services:
+  # Serviço da API
+  order-service:
+    image: order-service:latest
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    ports:
+      - "5000:8080" 
+    volumes:
+      - ~/.aws:/root/.aws:ro 
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - AWS__Region=${Region}
+      - AWS__SQSQueueUrl=${SQS_QUEUE_URL}
+
+    
+
+  # Serviço do Worker
+  order-processor:
+    image: order-processor:latest
+    build:
+      context: ./services/order-processor
+      dockerfile: Dockerfile
+    volumes:
+      - ~/.aws:/root/.aws:ro  
+    environment:
+      - AWS__Region=${Region}
+      - AWS__SQSQueueUrl=${SQS_QUEUE_URL}
