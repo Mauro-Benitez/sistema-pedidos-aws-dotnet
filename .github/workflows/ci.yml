@@ -1,4 +1,4 @@
-name: CI Inicial
+name: CI/CD - Sistema de Pedidos
 
 on:
   push:
@@ -7,21 +7,86 @@ on:
     branches: ["master"]
       
 jobs:
-  build:
+  # --- JOB 1: Build e Test do Order Service ---
+  build-order-service:
+    name: Build & Test (API)
     runs-on: ubuntu-latest
     steps:    
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore Dependencies
-        run: dotnet restore
+      - name: Restore, Build and Test
+        working-directory: ./services/order-service
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+          dotnet test --no-build -c Release
 
-      - name: Build
-        run: dotnet build --no-restore
+  # --- JOB 2: Build e Test do Worker ---
+  build-order-processor:
+    name: Build & Test (Worker)
+    runs-on: ubuntu-latest
+    steps:    
+      - uses: actions/checkout@v4
 
-      - name: Test
-        run: dotnet test --no-build
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore, Build and Test
+        working-directory: ./services/order-processor
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+          dotnet test --no-build -c Release
+
+  # --- JOB 3: Docker e ECR  ---
+  docker-build-and-push:
+    name: Build Docker & Push to ECR
+    runs-on: ubuntu-latest
+    needs: [build-order-service, build-order-processor] 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      # 1. Autentica na AWS usando as Secrets do GitHub
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 2. Faz o login do Docker no AWS ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 3. Build e Push do Order Service (API)
+      - name: Build, tag, and push Order Service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: order-service
+          IMAGE_TAG: ${{ github.sha }} 
+        run: |
+          echo "Building Order Service..."
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -f services/order-service/Dockerfile services/order-service
+          echo "Pushing Order Service to ECR..."
+          docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
+
+      # 4. Build e Push do Order Processor (Worker)
+      - name: Build, tag, and push Order Processor
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: order-processor
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building Order Processor..."
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -f services/order-processor/Dockerfile services/order-processor
+          echo "Pushing Order Processor to ECR..."
+          docker push -a $ECR_REGISTRY/$ECR_REPOSITORY

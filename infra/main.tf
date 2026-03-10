@@ -77,6 +77,33 @@ resource "random_id" "suffix" {
 }
 
 
+# --- ECR ---
+
+# Repositório para o Order Service (API)
+resource "aws_ecr_repository" "order_service" {
+  name                 = "order-service"
+  image_tag_mutability = "MUTABLE" 
+  force_delete         = true      
+}
+
+# Repositório para o Order Processor (Worker)
+resource "aws_ecr_repository" "order_processor" {
+  name                 = "order-processor"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+}
+
+# --- OUTPUTS DO ECR ---
+output "ecr_order_service_url" {
+  value       = aws_ecr_repository.order_service.repository_url
+  description = "URL do repositorio ECR do Order Service"
+}
+
+output "ecr_order_processor_url" {
+  value       = aws_ecr_repository.order_processor.repository_url
+  description = "URL do repositorio ECR do Worker"
+}
+
 # ----- API GATEWAY -----
 
 # 1. API Gateway do tipo HTTP 
@@ -85,7 +112,7 @@ resource "aws_apigatewayv2_api" "gateway" {
   protocol_type = "HTTP"
 }
 
-# 2. Configura o "Authorizer" (Conecta o Gateway ao Cognito)
+# 2. Configura o "Authorizer" 
 resource "aws_apigatewayv2_authorizer" "auth" {
   api_id           = aws_apigatewayv2_api.gateway.id
   authorizer_type  = "JWT"
@@ -103,15 +130,14 @@ resource "aws_apigatewayv2_route" "create_order" {
   api_id    = aws_apigatewayv2_api.gateway.id
   route_key = "POST /orders"
   
-  # AQUI ESTÁ A MÁGICA: Só passa se tiver token válido
+  
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.auth.id
 
   target = "integrations/${aws_apigatewayv2_integration.backend.id}"
 }
 
-# 4. Integração (Para onde o Gateway manda o pedido?)
-# NOTA: Como não temos IP público ainda, vamos apontar para um mock
+# 4. Integração 
 resource "aws_apigatewayv2_integration" "backend" {
   api_id           = aws_apigatewayv2_api.gateway.id
   integration_type = "HTTP_PROXY"
